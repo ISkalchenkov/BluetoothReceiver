@@ -64,11 +64,6 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void string_parse(uint8_t *buf_str)
-{
-    CDC_Transmit_FS(buf_str, strlen((char*)buf_str));
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
-}
 
 void decrypt_string(uint8_t *string) {
     for (int i = 0; string[i] != '\0'; ++i) {
@@ -95,20 +90,21 @@ void decrypt_string(uint8_t *string) {
 
 void UART2_RxCpltCallback(void) {
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
-    if (buff.index == 126) {
-        buff.string[buff.index++] = byte;
+    buff.string[buff.index++] = byte;
+    if (buff.index == 127) {
         buff.string[buff.index] = '\0';
         decrypt_string(buff.string);
-        string_parse(buff.string);
+        CDC_Transmit_FS(buff.string, strlen((char*)buff.string));
         buff.index = 0;
         HAL_UART_Receive_IT(&huart2, &byte, 1);
         return;
     }
-    buff.string[buff.index++] = byte;
+
     if (byte == '\n') {
         buff.string[buff.index] = '\0';
         decrypt_string(buff.string);
-        string_parse(buff.string);
+        CDC_Transmit_FS(buff.string, strlen((char*)buff.string));
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
         buff.index = 0;
         HAL_UART_Receive_IT(&huart2, &byte, 1);
         return;
